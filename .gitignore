@@ -2,3 +2,6 @@ target/
 .classpath
 .project
 .settings/
+*.properties
+trident-hackaton.ipr
+trident-hackaton.iws
