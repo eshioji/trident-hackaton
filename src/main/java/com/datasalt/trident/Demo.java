@@ -15,15 +15,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This class is not mean to be run, instead it is mean to be read. This is the guideline I followed for giving a
- * hackaton at Berlin for the #4 Big Data Beers: http://www.meetup.com/Big-Data-Beers/events/112226662/
- * <p/>
- * If you read through the code and the comments you will see how I explained different Trident concepts.
- * <p/>
+ * This class is not mean to be run, instead it is mean to be read.
+ *
  * If you want to run some stream you'll need to comment out everything else. Otherwise the topology will run all the
  * streams at the same time, which can be a bit of a chaos.
  *
  * @author pere
+ * Modified by @author Enno Shioji (enno.shioji@peerindex.com)
  */
 public class Demo {
 
@@ -121,7 +119,8 @@ public class Demo {
                 .each(new Fields("text", "actor"), new Utils.PrintFilter());
 
         // Functions describe their output fields, which are always appended to the input fields.
-        topology.newStream("function", spout)
+        topology
+                .newStream("function", spout)
                 .each(new Fields("text", "actor"), new UppercaseFunction(), new Fields("uppercased_text"))
                 .each(new Fields("text", "uppercased_text"), new Utils.PrintFilter());
 
@@ -131,13 +130,19 @@ public class Demo {
         // Parallelism hint is applied downwards until a partitioning operation (we will see this later).
         // This topology creates 5 spouts and 5 bolts:
         // Let's debug that with TridentOperationContext . partitionIndex !
-        topology.newStream("parallel", spout).each(new Fields("text", "actor"), new PereTweetsFilter())
-                .parallelismHint(5).each(new Fields("text", "actor"), new Utils.PrintFilter());
+        topology
+                .newStream("parallel", spout)
+                .each(new Fields("text", "actor"), new PereTweetsFilter())
+                .parallelismHint(5)
+                .each(new Fields("text", "actor"), new Utils.PrintFilter());
 
         // A stream can be partitioned in various ways.
         // Let's partition it by "actor". What happens with previous example?
-        topology.newStream("parallel_and_partitioned", spout).partitionBy(new Fields("actor"))
-                .each(new Fields("text", "actor"), new PereTweetsFilter()).parallelismHint(5)
+        topology
+                .newStream("parallel_and_partitioned", spout)
+                .partitionBy(new Fields("actor"))
+                .each(new Fields("text", "actor"), new PereTweetsFilter())
+                .parallelismHint(5)
                 .each(new Fields("text", "actor"), new Utils.PrintFilter());
 
         // Only one partition is filtering, which makes sense for the case.
@@ -149,17 +154,24 @@ public class Demo {
 
         // But if we don't want to partition by any field, we can just use shuffle()
         // We could also choose global() - with care!
-        topology.newStream("parallel_and_partitioned", spout).parallelismHint(1).shuffle()
-                .each(new Fields("text", "actor"), new PereTweetsFilter()).parallelismHint(5)
+        topology
+                .newStream("parallel_and_partitioned", spout)
+                .parallelismHint(1)
+                .shuffle()
+                .each(new Fields("text", "actor"), new PereTweetsFilter())
+                .parallelismHint(5)
                 .each(new Fields("text", "actor"), new Utils.PrintFilter());
 
         // Because data is batched, we can aggregate batches for efficiency.
         // The aggregate primitive aggregates one full batch. Useful if we want to persist the result of each batch only
         // once.
         // The aggregation for each batch is executed in a random partition as can be seen:
-        topology.newStream("aggregation", spout).parallelismHint(1)
+        topology
+                .newStream("aggregation", spout)
+                .parallelismHint(1)
                 .aggregate(new Fields("location"), new LocationAggregator(), new Fields("aggregated_result"))
-                .parallelismHint(5).each(new Fields("aggregated_result"), new Utils.PrintFilter());
+                .parallelismHint(5)
+                .each(new Fields("aggregated_result"), new Utils.PrintFilter());
 
         // The partitionAggregate on the other hand only executes the aggregator within one partition's part of the batch.
         // Let's debug that with TridentOperationContext . partitionIndex !
@@ -167,8 +179,8 @@ public class Demo {
                 .newStream("partial_aggregation", spout)
                 .parallelismHint(1)
                 .shuffle()
-                .partitionAggregate(new Fields("location"), new LocationAggregator(),
-                        new Fields("aggregated_result")).parallelismHint(6)
+                .partitionAggregate(new Fields("location"), new LocationAggregator(), new Fields("aggregated_result"))
+                .parallelismHint(6)
                 .each(new Fields("aggregated_result"), new Utils.PrintFilter());
 
         // (See what happens when we change the Spout batch size / parallelism)
@@ -177,8 +189,12 @@ public class Demo {
         // It splits the stream into groups so that aggregations only ocurr within a group.
         // Because now we are grouping, the aggregation function can be much simpler (Count())
         // We don't need to use HashMaps anymore.
-        topology.newStream("aggregation", spout).parallelismHint(1).groupBy(new Fields("location"))
-                .aggregate(new Fields("location"), new Count(), new Fields("count")).parallelismHint(5)
+        topology
+                .newStream("aggregation", spout)
+                .parallelismHint(1)
+                .groupBy(new Fields("location"))
+                .aggregate(new Fields("location"), new Count(), new Fields("count"))
+                .parallelismHint(5)
                 .each(new Fields("location", "count"), new Utils.PrintFilter());
 
         // EXERCISE: Use Functions and Aggregators to parallelize per-hashtag counts.
