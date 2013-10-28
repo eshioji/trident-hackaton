@@ -1,5 +1,7 @@
 package com.datasalt.trident;
 
+import backtype.storm.Config;
+import backtype.storm.LocalCluster;
 import backtype.storm.LocalDRPC;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.tuple.Fields;
@@ -25,80 +27,6 @@ import java.util.Map;
  */
 public class Demo {
 
-    /**
-     * Dummy filter that just keeps tweets by "Pere"
-     */
-    @SuppressWarnings({"serial", "rawtypes"})
-    public static class PereTweetsFilter implements Filter {
-
-        int partitionIndex;
-
-        @Override
-        public void prepare(Map conf, TridentOperationContext context) {
-            this.partitionIndex = context.getPartitionIndex();
-        }
-
-        @Override
-        public void cleanup() {
-        }
-
-        @Override
-        public boolean isKeep(TridentTuple tuple) {
-            boolean filter = tuple.getString(1).equals("pere");
-            if (filter) {
-                System.err.println("I am partition [" + partitionIndex + "] and I have filtered pere.");
-            }
-            return filter;
-        }
-    }
-
-    /**
-     * Dummy function that just emits the uppercased tweet text.
-     */
-    @SuppressWarnings("serial")
-    public static class UppercaseFunction extends BaseFunction {
-
-        @Override
-        public void execute(TridentTuple tuple, TridentCollector collector) {
-            collector.emit(new Values(tuple.getString(0).toUpperCase()));
-        }
-    }
-
-    /**
-     * A simple Aggregator that produces a hashmap of key, counts.
-     */
-    @SuppressWarnings("serial")
-    public static class LocationAggregator implements Aggregator<Map<String, Integer>> {
-
-        int partitionId;
-
-        @SuppressWarnings("rawtypes")
-        @Override
-        public void prepare(Map conf, TridentOperationContext context) {
-            this.partitionId = context.getPartitionIndex();
-        }
-
-        @Override
-        public void cleanup() {
-        }
-
-        @Override
-        public Map<String, Integer> init(Object batchId, TridentCollector collector) {
-            return new HashMap<String, Integer>();
-        }
-
-        @Override
-        public void aggregate(Map<String, Integer> val, TridentTuple tuple, TridentCollector collector) {
-            String loc = tuple.getString(0);
-            val.put(loc, MapUtils.getInteger(val, loc, 0) + 1);
-        }
-
-        @Override
-        public void complete(Map<String, Integer> val, TridentCollector collector) {
-            System.err.println("I am partition [" + partitionId + "] and have aggregated: [" + val + "]");
-            collector.emit(new Values(val));
-        }
-    }
 
     public static StormTopology buildTopology(LocalDRPC drpc) throws IOException {
         FakeTweetsBatchSpout spout = new FakeTweetsBatchSpout();
@@ -205,11 +133,88 @@ public class Demo {
         return topology.build();
     }
 
-//	public static void main(String[] args) throws Exception {
-//		Config conf = new Config();
-//
-//		LocalDRPC drpc = new LocalDRPC();
-//		LocalCluster cluster = new LocalCluster();
-//		cluster.submitTopology("hackaton", conf, buildTopology(drpc));
-//	}
+	public static void main(String[] args) throws Exception {
+		Config conf = new Config();
+
+		LocalDRPC drpc = new LocalDRPC();
+		LocalCluster cluster = new LocalCluster();
+		cluster.submitTopology("hackaton", conf, buildTopology(drpc));
+	}
+
+
+    /**
+     * Dummy filter that just keeps tweets by "Pere"
+     */
+    @SuppressWarnings({"serial", "rawtypes"})
+    public static class PereTweetsFilter implements Filter {
+
+        int partitionIndex;
+
+        @Override
+        public void prepare(Map conf, TridentOperationContext context) {
+            this.partitionIndex = context.getPartitionIndex();
+        }
+
+        @Override
+        public void cleanup() {
+        }
+
+        @Override
+        public boolean isKeep(TridentTuple tuple) {
+            boolean filter = tuple.getString(1).equals("pere");
+            if (filter) {
+                System.err.println("I am partition [" + partitionIndex + "] and I have filtered pere.");
+            }
+            return filter;
+        }
+    }
+
+    /**
+     * Dummy function that just emits the uppercased tweet text.
+     */
+    @SuppressWarnings("serial")
+    public static class UppercaseFunction extends BaseFunction {
+
+        @Override
+        public void execute(TridentTuple tuple, TridentCollector collector) {
+            collector.emit(new Values(tuple.getString(0).toUpperCase()));
+        }
+    }
+
+    /**
+     * A simple Aggregator that produces a hashmap of key, counts.
+     */
+    @SuppressWarnings("serial")
+    public static class LocationAggregator implements Aggregator<Map<String, Integer>> {
+
+        int partitionId;
+
+        @SuppressWarnings("rawtypes")
+        @Override
+        public void prepare(Map conf, TridentOperationContext context) {
+            this.partitionId = context.getPartitionIndex();
+        }
+
+        @Override
+        public void cleanup() {
+        }
+
+        @Override
+        public Map<String, Integer> init(Object batchId, TridentCollector collector) {
+            return new HashMap<String, Integer>();
+        }
+
+        @Override
+        public void aggregate(Map<String, Integer> val, TridentTuple tuple, TridentCollector collector) {
+            String loc = tuple.getString(0);
+            val.put(loc, MapUtils.getInteger(val, loc, 0) + 1);
+        }
+
+        @Override
+        public void complete(Map<String, Integer> val, TridentCollector collector) {
+            System.err.println("I am partition [" + partitionId + "] and have aggregated: [" + val + "]");
+            collector.emit(new Values(val));
+        }
+    }
+
 }
