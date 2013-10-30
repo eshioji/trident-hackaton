@@ -48,8 +48,8 @@ public class BookOfTrident {
         LocalCluster cluster = new LocalCluster();
 
 
-//        // Learn about Trident's basic primitives
-//        cluster.submitTopology("basic_primitives", conf, basicPrimitives(new FakeTweetsBatchSpout()));
+        // Learn about Trident's basic primitives
+        cluster.submitTopology("basic_primitives", conf, basicPrimitives(new FakeTweetsBatchSpout()));
 
         // Learn how to use Trident State and DRPC
         FeederBatchSpout testSpout = new FeederBatchSpout(ImmutableList.of("id", "text", "actor", "location", "date"));
@@ -225,6 +225,7 @@ public class BookOfTrident {
                 .each(new Fields("individual_count"), new FilterNull())
                 .aggregate(new Fields("individual_count"), new Sum(), new Fields("count"));
 
+        // For how to call DRPC calls, go back to the main method
 
         return topology.build();
     }
