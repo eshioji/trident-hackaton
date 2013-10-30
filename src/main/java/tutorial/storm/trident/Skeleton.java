@@ -10,10 +10,10 @@ import com.google.common.collect.ImmutableList;
 import storm.trident.TridentState;
 import storm.trident.TridentTopology;
 import storm.trident.operation.builtin.Count;
+import storm.trident.operation.builtin.Debug;
 import storm.trident.operation.builtin.MapGet;
 import storm.trident.testing.FeederBatchSpout;
 import storm.trident.testing.MemoryMapState;
-import tutorial.storm.trident.testutil.Utils;
 
 import java.io.IOException;
 
@@ -27,10 +27,11 @@ public class Skeleton {
     public static StormTopology buildTopology(LocalDRPC drpc, FeederBatchSpout spout) throws IOException {
 
         TridentTopology topology = new TridentTopology();
+
         TridentState countState =
         topology
                 .newStream("spout", spout)
-                .each(new Fields("actor"), new Utils.PrintFilter())
+                .each(new Fields("actor"), new Debug())
                 .groupBy(new Fields("actor"))
                 .persistentAggregate(new MemoryMapState.Factory(), new Count(), new Fields("count"))
         ;
@@ -65,9 +66,6 @@ public class Skeleton {
 
 
         System.out.println(drpc.execute("actor_count","rose"));
-        System.out.println(drpc.execute("actor_count","fred"));
-        System.out.println(drpc.execute("actor_count","steve"));
 
-        System.out.println("huh?");
     }
 }
