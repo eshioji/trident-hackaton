@@ -31,15 +31,7 @@ public class Lesson02_AdvancedPrimitives {
 
         TridentTopology topology = new TridentTopology();
 
-        // Stream can be parallelized with "parallelismHint"
-        // Parallelism hint is applied downwards until a partitioning operation (we will see this later).
-        // This topology creates 5 spouts and 5 bolts:
-        // Let's debug that with TridentOperationContext . partitionIndex !
-        topology
-                .newStream("parallel", spout)
-                .each(new Fields("text", "actor"), new FilterByRegex("pere"))
-                .parallelismHint(5)
-                .each(new Fields("text", "actor"), new Debug());
+
 
         // A stream can be partitioned in various ways.
         // Let's partition it by "actor". What happens with previous example?

@@ -5,6 +5,8 @@ import backtype.storm.task.TopologyContext;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 import org.apache.commons.io.IOUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import storm.trident.operation.TridentCollector;
 import storm.trident.spout.IBatchSpout;
 import storm.trident.spout.ITridentSpout;
@@ -14,6 +16,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * A Spout that emits fake tweets.
@@ -22,6 +25,7 @@ import java.util.Random;
  */
 @SuppressWarnings({"serial", "rawtypes"})
 public class FakeTweetsBatchSpout implements IBatchSpout {
+    private static final AtomicInteger seq = new AtomicInteger();
 
     private int batchSize;
     private FakeTweetGenerator fakeTweetGenerator;
@@ -39,7 +43,7 @@ public class FakeTweetsBatchSpout implements IBatchSpout {
     @Override
     public void open(Map conf, TopologyContext context) {
         // init
-        System.err.println("Open Spout instance");
+        System.err.println(this.getClass().getSimpleName() +":" + seq.incrementAndGet()+" opened.");
         fakeTweetGenerator = new FakeTweetGenerator();
     }
 
