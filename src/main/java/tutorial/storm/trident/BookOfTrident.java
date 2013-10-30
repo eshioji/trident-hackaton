@@ -6,6 +6,7 @@ import backtype.storm.LocalDRPC;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
+import backtype.storm.utils.DRPCClient;
 import com.google.common.collect.ImmutableList;
 import org.apache.commons.collections.MapUtils;
 import storm.trident.operation.builtin.FilterNull;
@@ -54,21 +55,27 @@ public class BookOfTrident {
         // Learn about Trident's basic primitives
         cluster.submitTopology("basic_primitives", conf, basicPrimitives(new FakeTweetsBatchSpout()));
 
+
         // Learn how to use Trident State and DRPC
         FeederBatchSpout testSpout = new FeederBatchSpout(ImmutableList.of("id", "text", "actor", "location", "date"));
         LocalDRPC drpc = new LocalDRPC();
         cluster.submitTopology("state_drpc", conf, stateAndDRPC(drpc, testSpout));
 
+        // You can use FeederBatchSpout to feed know values to the topology. Very useful for tests.
         testSpout.feed(fakeTweets.getNextTweetTuples("ted"));
         testSpout.feed(fakeTweets.getNextTweetTuples("ted"));
         testSpout.feed(fakeTweets.getNextTweetTuples("mary"));
         testSpout.feed(fakeTweets.getNextTweetTuples("jason"));
 
+        // This is how you make DRPC calls. First argument must match the function name
         System.out.println(drpc.execute("ping", "ping pang pong"));
         System.out.println(drpc.execute("count", "america america ace ace ace item"));
         System.out.println(drpc.execute("count_per_actor", "ted"));
         System.out.println(drpc.execute("count_per_actors", "ted mary pere jason"));
-        System.out.println("DONE");
+
+        // You can use a client library to make calls remotely
+//        DRPCClient client = new DRPCClient("drpc.server.location", 3772);
+//        System.out.println(client.execute("ping", "ping pang pong"));
 
     }
 
