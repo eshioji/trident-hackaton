@@ -2,13 +2,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.datasalt.trident</groupId>
-    <artifactId>trident-hackaton</artifactId>
+    <groupId>tutorial.storm.trident</groupId>
+    <artifactId>trident-tutorial</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>jar</packaging>
 
-    <name>trident-hackaton</name>
-    <url>https://github.com/pereferrera/trident-hackaton</url>
+    <name>trident-tutorial</name>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -32,12 +31,19 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-all</artifactId>
+            <version>1.9.5</version>
+        </dependency>
+
+        <dependency>
             <groupId>storm</groupId>
             <artifactId>storm</artifactId>
             <version>0.9.0-wip21</version>
             <!-- keep storm out of the jar-with-dependencies -->
             <!--<scope>provided</scope>-->
         </dependency>
+
         <dependency>
             <groupId>org.twitter4j</groupId>
             <artifactId>twitter4j-core</artifactId>
@@ -72,6 +78,12 @@
             <groupId>storm</groupId>
             <artifactId>storm-kafka</artifactId>
             <version>0.9.0-wip16a-scala292</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.apache.zookeeper</groupId>
+                    <artifactId>zookeeper</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>com.codahale.metrics</groupId>
