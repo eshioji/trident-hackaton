@@ -5,3 +5,4 @@ target/
 *.properties
 trident-hackaton.ipr
 trident-hackaton.iws
+src/main/java/storm
