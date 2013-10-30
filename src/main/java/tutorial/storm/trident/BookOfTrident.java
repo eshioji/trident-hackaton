@@ -12,6 +12,7 @@ import storm.trident.operation.builtin.FilterNull;
 import storm.trident.operation.builtin.Sum;
 import storm.trident.spout.IBatchSpout;
 import storm.trident.testing.FeederBatchSpout;
+import trident.memcached.MemcachedState;
 import tutorial.storm.trident.operations.FilterByRegex;
 import tutorial.storm.trident.operations.Split;
 import storm.trident.TridentState;
@@ -26,7 +27,9 @@ import tutorial.storm.trident.testutil.FakeTweetsBatchSpout;
 import tutorial.storm.trident.testutil.Utils;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -188,6 +191,16 @@ public class BookOfTrident {
                         .newStream("spout", spout)
                         .groupBy(new Fields("actor"))
                         .persistentAggregate(new MemoryMapState.Factory(), new Count(), new Fields("count"));
+
+        // There are a few ready-made state libraries that you can use
+        // Below is an example to use memcached
+//        List<InetSocketAddress> memcachedServerLocations = ImmutableList.of(new InetSocketAddress("some.memcached.server",12000));
+//        TridentState countStateMemcached =
+//                topology
+//                        .newStream("spout", spout)
+//                        .groupBy(new Fields("actor"))
+//                        .persistentAggregate(MemcachedState.transactional(memcachedServerLocations), new Count(), new Fields("count"));
+
 
 
         // DRPC stands for Distributed Remote Procedure Call
