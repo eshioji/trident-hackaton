@@ -6,7 +6,12 @@ import backtype.storm.LocalDRPC;
 import backtype.storm.generated.StormTopology;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
+import com.google.common.collect.ImmutableList;
 import org.apache.commons.collections.MapUtils;
+import storm.trident.operation.builtin.FilterNull;
+import storm.trident.operation.builtin.Sum;
+import storm.trident.spout.IBatchSpout;
+import storm.trident.testing.FeederBatchSpout;
 import tutorial.storm.trident.operations.FilterByRegex;
 import tutorial.storm.trident.operations.Split;
 import storm.trident.TridentState;
@@ -16,6 +21,7 @@ import storm.trident.operation.builtin.Count;
 import storm.trident.operation.builtin.MapGet;
 import storm.trident.testing.MemoryMapState;
 import storm.trident.tuple.TridentTuple;
+import tutorial.storm.trident.testutil.FakeTweetGenerator;
 import tutorial.storm.trident.testutil.FakeTweetsBatchSpout;
 import tutorial.storm.trident.testutil.Utils;
 
@@ -35,28 +41,36 @@ import java.util.Map;
 public class BookOfTrident {
 
     public static void main(String[] args) throws Exception {
+        FakeTweetGenerator fakeTweets = new FakeTweetGenerator();
 
         // Storm can be run locally for testing purposes
         Config conf = new Config();
         LocalCluster cluster = new LocalCluster();
 
+
 //        // Learn about Trident's basic primitives
-//        cluster.submitTopology("basic_primitives", conf, basicPrimitives());
+//        cluster.submitTopology("basic_primitives", conf, basicPrimitives(new FakeTweetsBatchSpout()));
 
         // Learn how to use Trident State and DRPC
+        FeederBatchSpout testSpout = new FeederBatchSpout(ImmutableList.of("id", "text", "actor", "location", "date"));
         LocalDRPC drpc = new LocalDRPC();
-        cluster.submitTopology("state_drpc", conf, stateAndDRPC(drpc));
+        cluster.submitTopology("state_drpc", conf, stateAndDRPC(drpc, testSpout));
 
-        Thread.sleep(3000);
+        testSpout.feed(fakeTweets.getNextTweetTuples("ted"));
+        testSpout.feed(fakeTweets.getNextTweetTuples("ted"));
+        testSpout.feed(fakeTweets.getNextTweetTuples("mary"));
+        testSpout.feed(fakeTweets.getNextTweetTuples("jason"));
+
         System.out.println(drpc.execute("ping", "ping pang pong"));
         System.out.println(drpc.execute("count", "america america ace ace ace item"));
+        System.out.println(drpc.execute("count_per_actor", "ted"));
+        System.out.println(drpc.execute("count_per_actors", "ted mary pere jason"));
         System.out.println("DONE");
 
     }
 
 
-    public static StormTopology basicPrimitives() throws IOException {
-        FakeTweetsBatchSpout spout = new FakeTweetsBatchSpout();
+    public static StormTopology basicPrimitives(IBatchSpout spout) throws IOException {
 
         // A topology is a set of streams.
         // A stream is a DAG of Spouts and Bolts.
@@ -160,9 +174,7 @@ public class BookOfTrident {
     }
 
 
-    private static StormTopology stateAndDRPC(LocalDRPC drpc) throws IOException {
-        FakeTweetsBatchSpout spout = new FakeTweetsBatchSpout();
-
+    private static StormTopology stateAndDRPC(LocalDRPC drpc, FeederBatchSpout spout) throws IOException {
         TridentTopology topology = new TridentTopology();
 
         // persistentAggregate persists the result of aggregation into data stores,
@@ -179,35 +191,39 @@ public class BookOfTrident {
 
 
         // DRPC stands for Distributed Remote Procedure Call
-        // You can issue calls using DRPC client library
+        // You can issue calls using the DRPC client library
         // A DRPC call takes two Strings, function name and function arguments
+        //
         // In order to call the DRPC defined below, you'd use "count_per_actor" as the function name
         // The function arguments will be available as "args"
         topology
-                .newDRPCStream("ping",drpc)
+                .newDRPCStream("ping", drpc)
                 .each(new Fields("args"), new Split(" "), new Fields("reply"))
                 .each(new Fields("reply"), new FilterByRegex("ping"))
                 .project(new Fields("reply"));
 
         // You can apply usual processing primitives to DRPC streams as well
         topology
-                .newDRPCStream("count",drpc)
+                .newDRPCStream("count", drpc)
                 .each(new Fields("args"), new Split(" "), new Fields("split"))
                 .each(new Fields("split"), new FilterByRegex("a.*"))
                 .groupBy(new Fields("split"))
                 .aggregate(new Count(), new Fields("count"));
 
 
-        // Now to a more useful example; you can query the state you created earlier
+        // More usefully, you can query the state you created earlier
         topology
                 .newDRPCStream("count_per_actor", drpc)
                 .stateQuery(countState, new Fields("args"), new MapGet(), new Fields("count"));
 
-        // You can
-//        topology
-//                .newDRPCStream("count_per_actors", drpc).each(new Fields("args"), new Split(Splitter.on(" ")), new Fields("word")).groupBy(new Fields(
-//                "word")).stateQuery(wordCounts, new Fields("word"), new MapGet(), new Fields("count")).each(new Fields("count"),
-//                new FilterNull()).aggregate(new Fields("count"), new Sum(), new Fields("sum"));
+        // Here is a more complex example
+        topology
+                .newDRPCStream("count_per_actors", drpc)
+                .each(new Fields("args"), new Split(" "), new Fields("actor"))
+                .groupBy(new Fields("actor"))
+                .stateQuery(countState, new Fields("actor"), new MapGet(), new Fields("individual_count"))
+                .each(new Fields("individual_count"), new FilterNull())
+                .aggregate(new Fields("individual_count"), new Sum(), new Fields("count"));
 
 
         return topology.build();
