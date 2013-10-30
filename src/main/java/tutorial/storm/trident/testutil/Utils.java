@@ -1,4 +1,4 @@
-package com.datasalt.trident;
+package tutorial.storm.trident.testutil;
 
 import storm.trident.operation.Filter;
 import storm.trident.operation.TridentOperationContext;

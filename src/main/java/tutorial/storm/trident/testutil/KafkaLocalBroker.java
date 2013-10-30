@@ -1,16 +1,8 @@
-package storm.example.trident.testutil;
+package tutorial.storm.trident.testutil;
 
 import com.google.common.util.concurrent.AbstractService;
-import kafka.api.FetchRequest;
-import kafka.javaapi.consumer.SimpleConsumer;
-import kafka.javaapi.message.ByteBufferMessageSet;
-import kafka.javaapi.producer.Producer;
-import kafka.javaapi.producer.ProducerData;
-import kafka.message.MessageAndOffset;
-import kafka.producer.ProducerConfig;
 import kafka.server.KafkaConfig;
 import kafka.server.KafkaServer;
-import kafka.utils.Utils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

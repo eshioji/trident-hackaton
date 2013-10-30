@@ -1,4 +1,4 @@
-package com.datasalt.trident;
+package tutorial.storm.trident.testutil;
 
 import backtype.storm.Config;
 import backtype.storm.task.TopologyContext;

@@ -1,4 +1,4 @@
-package storm.example.trident.testutil;
+package tutorial.storm.trident.testutil;
 
 import com.codahale.metrics.MetricRegistry;
 import com.codahale.metrics.Slf4jReporter;

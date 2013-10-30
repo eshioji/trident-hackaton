@@ -1,4 +1,4 @@
-package com.datasalt.trident;
+package tutorial.storm.trident;
 
 import backtype.storm.Config;
 import backtype.storm.LocalCluster;
@@ -7,17 +7,24 @@ import backtype.storm.generated.StormTopology;
 import backtype.storm.tuple.Fields;
 import backtype.storm.tuple.Values;
 import org.apache.commons.collections.MapUtils;
+import tutorial.storm.trident.operations.FilterByRegex;
+import tutorial.storm.trident.operations.Split;
+import storm.trident.TridentState;
 import storm.trident.TridentTopology;
 import storm.trident.operation.*;
 import storm.trident.operation.builtin.Count;
+import storm.trident.operation.builtin.MapGet;
+import storm.trident.testing.MemoryMapState;
 import storm.trident.tuple.TridentTuple;
+import tutorial.storm.trident.testutil.FakeTweetsBatchSpout;
+import tutorial.storm.trident.testutil.Utils;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
 /**
- * This class is not mean to be run, instead it is mean to be read.
+ * This class is not meant to be run, instead it is meant to be read.
  *
  * If you want to run some stream you'll need to comment out everything else. Otherwise the topology will run all the
  * streams at the same time, which can be a bit of a chaos.
@@ -25,10 +32,30 @@ import java.util.Map;
  * @author pere
  * Modified by @author Enno Shioji (enno.shioji@peerindex.com)
  */
-public class Demo {
+public class BookOfTrident {
+
+    public static void main(String[] args) throws Exception {
+
+        // Storm can be run locally for testing purposes
+        Config conf = new Config();
+        LocalCluster cluster = new LocalCluster();
+
+//        // Learn about Trident's basic primitives
+//        cluster.submitTopology("basic_primitives", conf, basicPrimitives());
+
+        // Learn how to use Trident State and DRPC
+        LocalDRPC drpc = new LocalDRPC();
+        cluster.submitTopology("state_drpc", conf, stateAndDRPC(drpc));
+
+        Thread.sleep(3000);
+        System.out.println(drpc.execute("ping", "ping pang pong"));
+        System.out.println(drpc.execute("count", "america america ace ace ace item"));
+        System.out.println("DONE");
+
+    }
 
 
-    public static StormTopology buildTopology(LocalDRPC drpc) throws IOException {
+    public static StormTopology basicPrimitives() throws IOException {
         FakeTweetsBatchSpout spout = new FakeTweetsBatchSpout();
 
         // A topology is a set of streams.
@@ -128,18 +155,63 @@ public class Demo {
         // EXERCISE: Use Functions and Aggregators to parallelize per-hashtag counts.
         // Step by step: 1) Obtain and select hashtags, 2) Write the Aggregator.
 
-        // Bonus 1: State API.
-        // Bonus 2: "Trending" hashtags.
+        // Bonus : "Trending" hashtags.
         return topology.build();
     }
 
-	public static void main(String[] args) throws Exception {
-		Config conf = new Config();
 
-		LocalDRPC drpc = new LocalDRPC();
-		LocalCluster cluster = new LocalCluster();
-		cluster.submitTopology("hackaton", conf, buildTopology(drpc));
-	}
+    private static StormTopology stateAndDRPC(LocalDRPC drpc) throws IOException {
+        FakeTweetsBatchSpout spout = new FakeTweetsBatchSpout();
+
+        TridentTopology topology = new TridentTopology();
+
+        // persistentAggregate persists the result of aggregation into data stores,
+        // which you can use from other applications.
+        // You can also use it in other topologies by using the TridentState object returned.
+        //
+        // The state is commonly backed by a data store like memcache, cassandra etc.
+        // Here we are simply using a hash map
+        TridentState countState =
+                topology
+                        .newStream("spout", spout)
+                        .groupBy(new Fields("actor"))
+                        .persistentAggregate(new MemoryMapState.Factory(), new Count(), new Fields("count"));
+
+
+        // DRPC stands for Distributed Remote Procedure Call
+        // You can issue calls using DRPC client library
+        // A DRPC call takes two Strings, function name and function arguments
+        // In order to call the DRPC defined below, you'd use "count_per_actor" as the function name
+        // The function arguments will be available as "args"
+        topology
+                .newDRPCStream("ping",drpc)
+                .each(new Fields("args"), new Split(" "), new Fields("reply"))
+                .each(new Fields("reply"), new FilterByRegex("ping"))
+                .project(new Fields("reply"));
+
+        // You can apply usual processing primitives to DRPC streams as well
+        topology
+                .newDRPCStream("count",drpc)
+                .each(new Fields("args"), new Split(" "), new Fields("split"))
+                .each(new Fields("split"), new FilterByRegex("a.*"))
+                .groupBy(new Fields("split"))
+                .aggregate(new Count(), new Fields("count"));
+
+
+        // Now to a more useful example; you can query the state you created earlier
+        topology
+                .newDRPCStream("count_per_actor", drpc)
+                .stateQuery(countState, new Fields("args"), new MapGet(), new Fields("count"));
+
+        // You can
+//        topology
+//                .newDRPCStream("count_per_actors", drpc).each(new Fields("args"), new Split(Splitter.on(" ")), new Fields("word")).groupBy(new Fields(
+//                "word")).stateQuery(wordCounts, new Fields("word"), new MapGet(), new Fields("count")).each(new Fields("count"),
+//                new FilterNull()).aggregate(new Fields("count"), new Sum(), new Fields("sum"));
+
+
+        return topology.build();
+    }
 
 
     /**
